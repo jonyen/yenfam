@@ -27,6 +27,28 @@
     .grid img { display: block; width: 100%; height: auto; transition: transform .3s; }
     .grid button:hover img { transform: scale(1.02); }
     .empty { text-align: center; color: var(--muted); padding: 80px 16px; }
+    #placeholder { display: none; min-height: 100vh; min-height: 100svh; flex-direction: column; align-items: center;
+      justify-content: center; text-align: center; padding: 48px 16px; }
+    body.waiting header, body.waiting main { display: none; }
+    body.waiting #placeholder { display: flex; }
+    .stack { position: relative; width: 220px; height: 230px; margin-bottom: 40px; }
+    .polaroid { position: absolute; inset: 0; margin: auto; width: 170px; height: 200px;
+      padding: 12px 12px 40px; border-radius: 3px; background: #fbfaf7; box-shadow: 0 6px 20px var(--shadow), 0 1px 3px var(--shadow);
+      transition: transform .5s ease; }
+    .polaroid::after { content: ""; display: block; width: 100%; height: 100%; border-radius: 1px; }
+    .polaroid:nth-child(1) { transform: rotate(-9deg) translate(-26px, 6px); }
+    .polaroid:nth-child(1)::after { background: linear-gradient(160deg, #e8c9a0, #c98d6b); }
+    .polaroid:nth-child(2) { transform: rotate(7deg) translate(28px, 4px); }
+    .polaroid:nth-child(2)::after { background: linear-gradient(160deg, #b9cbb0, #7f9c8a); }
+    .polaroid:nth-child(3) { transform: rotate(-1deg); }
+    .polaroid:nth-child(3)::after { background: linear-gradient(160deg, #a9c2d6, #6f8faa); }
+    .stack:hover .polaroid:nth-child(1) { transform: rotate(-14deg) translate(-46px, 10px); }
+    .stack:hover .polaroid:nth-child(2) { transform: rotate(12deg) translate(48px, 8px); }
+    @media (prefers-color-scheme: dark) { .polaroid::after { filter: brightness(.85); } }
+    @media (prefers-reduced-motion: reduce) { .polaroid { transition: none; } }
+    #placeholder h1 { margin-bottom: 12px; }
+    #placeholder p { color: var(--muted); margin: 0; max-width: 32ch; }
+    #placeholder small { color: var(--muted); opacity: .7; margin-top: 48px; letter-spacing: .08em; text-transform: uppercase; font-size: .72rem; }
     dialog { border: 0; padding: 0; background: transparent; max-width: 100vw; max-height: 100vh; width: 100vw; height: 100vh; }
     dialog::backdrop { background: rgba(10,9,8,.94); }
     .lb { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 16px; }
@@ -39,7 +61,16 @@
     .close { position: fixed; top: 16px; right: 16px; background: none; border: 0; color: #fff; font-size: 32px; cursor: pointer; }
   </style>
 </head>
-<body>
+<body class="waiting">
+  <section id="placeholder">
+    <div class="stack" aria-hidden="true">
+      <div class="polaroid"></div><div class="polaroid"></div><div class="polaroid"></div>
+    </div>
+    <h1>The Yen Family</h1>
+    <p>Our family photo album is on its way. Check back soon.</p>
+    <small>yenfam.com</small>
+  </section>
+
   <header>
     <h1>The Yen Family</h1>
     <p>Moments worth keeping</p>
@@ -69,10 +100,8 @@
     }
 
     function render() {
-      if (!photos.length) {
-        gallery.innerHTML = '<p class="empty">Photos coming soon.</p>';
-        return;
-      }
+      if (!photos.length) return;
+      document.body.classList.remove('waiting');
       const groups = new Map();
       photos.forEach((p, i) => {
         const key = groupLabel(p);
@@ -123,7 +152,7 @@
     fetch('photos.json', { cache: 'no-cache' })
       .then(r => r.json())
       .then(data => { photos = data; render(); })
-      .catch(() => { gallery.innerHTML = '<p class="empty">Could not load photos.</p>'; });
+      .catch(() => {});
   </script>
 </body>
 </html>
