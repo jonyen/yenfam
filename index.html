@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow, noimageindex">
+  <title>The Yen Family</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📷</text></svg>">
+  <style>
+    :root {
+      --bg: #faf8f5; --fg: #2b2622; --muted: #8a7f76; --card: #fff; --shadow: rgba(0,0,0,.08);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #171513; --fg: #ece6df; --muted: #9a9087; --card: #221f1c; --shadow: rgba(0,0,0,.4); }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--fg);
+      font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; }
+    header { text-align: center; padding: 56px 16px 24px; }
+    h1 { font-family: Georgia, "Times New Roman", serif; font-weight: 400; font-size: clamp(2rem, 6vw, 3.2rem); margin: 0; }
+    header p { color: var(--muted); margin: 6px 0 0; }
+    main { max-width: 1400px; margin: 0 auto; padding: 0 16px 64px; }
+    h2 { font-family: Georgia, serif; font-weight: 400; font-size: 1.4rem; margin: 40px 0 12px; }
+    .grid { columns: 4 260px; column-gap: 12px; }
+    .grid button { display: block; width: 100%; margin: 0 0 12px; padding: 0; border: 0; background: var(--card);
+      border-radius: 8px; overflow: hidden; cursor: zoom-in; box-shadow: 0 1px 3px var(--shadow); break-inside: avoid; }
+    .grid img { display: block; width: 100%; height: auto; transition: transform .3s; }
+    .grid button:hover img { transform: scale(1.02); }
+    .empty { text-align: center; color: var(--muted); padding: 80px 16px; }
+    dialog { border: 0; padding: 0; background: transparent; max-width: 100vw; max-height: 100vh; width: 100vw; height: 100vh; }
+    dialog::backdrop { background: rgba(10,9,8,.94); }
+    .lb { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 16px; }
+    .lb img { max-width: 100%; max-height: calc(100vh - 80px); object-fit: contain; border-radius: 4px; }
+    .lb figcaption { color: #cfc6bd; margin-top: 10px; font-size: .9rem; min-height: 1.4em; }
+    .nav { position: fixed; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,.12); color: #fff;
+      border: 0; width: 48px; height: 48px; border-radius: 50%; font-size: 24px; cursor: pointer; }
+    .nav:hover { background: rgba(255,255,255,.25); }
+    .prev { left: 16px; } .next { right: 16px; }
+    .close { position: fixed; top: 16px; right: 16px; background: none; border: 0; color: #fff; font-size: 32px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>The Yen Family</h1>
+    <p>Moments worth keeping</p>
+  </header>
+  <main id="gallery"></main>
+
+  <dialog id="lightbox">
+    <figure class="lb">
+      <img id="lb-img" alt="">
+      <figcaption id="lb-cap"></figcaption>
+    </figure>
+    <button class="nav prev" aria-label="Previous">‹</button>
+    <button class="nav next" aria-label="Next">›</button>
+    <button class="close" aria-label="Close">×</button>
+  </dialog>
+
+  <script>
+    const gallery = document.getElementById('gallery');
+    const lb = document.getElementById('lightbox');
+    const lbImg = document.getElementById('lb-img');
+    const lbCap = document.getElementById('lb-cap');
+    let photos = [];
+    let current = 0;
+
+    function groupLabel(p) {
+      return p.album || (p.date ? p.date.slice(0, 4) : 'Photos');
+    }
+
+    function render() {
+      if (!photos.length) {
+        gallery.innerHTML = '<p class="empty">Photos coming soon.</p>';
+        return;
+      }
+      const groups = new Map();
+      photos.forEach((p, i) => {
+        const key = groupLabel(p);
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(i);
+      });
+      gallery.innerHTML = '';
+      for (const [label, idxs] of groups) {
+        const h = document.createElement('h2');
+        h.textContent = label;
+        const grid = document.createElement('div');
+        grid.className = 'grid';
+        for (const i of idxs) {
+          const p = photos[i];
+          const b = document.createElement('button');
+          const img = document.createElement('img');
+          img.src = 'photos/thumb/' + p.file;
+          img.alt = p.caption || '';
+          img.loading = 'lazy';
+          if (p.w && p.h) { img.width = p.w; img.height = p.h; }
+          b.appendChild(img);
+          b.addEventListener('click', () => open(i));
+          grid.appendChild(b);
+        }
+        gallery.append(h, grid);
+      }
+    }
+
+    function show(i) {
+      current = (i + photos.length) % photos.length;
+      const p = photos[current];
+      lbImg.src = 'photos/full/' + p.file;
+      lbImg.alt = p.caption || '';
+      lbCap.textContent = [p.caption, p.date].filter(Boolean).join(' · ');
+    }
+    function open(i) { show(i); lb.showModal(); }
+
+    lb.querySelector('.prev').onclick = () => show(current - 1);
+    lb.querySelector('.next').onclick = () => show(current + 1);
+    lb.querySelector('.close').onclick = () => lb.close();
+    lb.addEventListener('click', e => { if (e.target === lb || e.target.classList.contains('lb')) lb.close(); });
+    document.addEventListener('keydown', e => {
+      if (!lb.open) return;
+      if (e.key === 'ArrowLeft') show(current - 1);
+      if (e.key === 'ArrowRight') show(current + 1);
+    });
+
+    fetch('photos.json', { cache: 'no-cache' })
+      .then(r => r.json())
+      .then(data => { photos = data; render(); })
+      .catch(() => { gallery.innerHTML = '<p class="empty">Could not load photos.</p>'; });
+  </script>
+</body>
+</html>
