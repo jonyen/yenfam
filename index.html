@@ -41,10 +41,10 @@
     .empty { text-align: center; color: var(--muted); padding: 80px 16px; }
     #placeholder { display: none; flex-direction: column; align-items: center;
       justify-content: center; text-align: center; padding: 40px 16px 48px; }
-    .hero { padding: 24px 16px 0; }
-    .hero-frame { position: relative; width: min(100%, calc(78svh * 4 / 3)); aspect-ratio: 4 / 3; margin: 0 auto;
-      border-radius: 12px; overflow: hidden; box-shadow: 0 8px 30px var(--shadow), 0 1px 3px var(--shadow); }
+    /* Fills the screen, but never so tall that the crop cuts the family off at the sides (tall phones). */
+    .hero-frame { position: relative; width: 100%; height: min(100vh, 121vw); height: min(100svh, 121vw); overflow: hidden; }
     .hero-frame img, .hero-frame canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+    .hero-frame img { object-fit: cover; }
     .hero-frame canvas { opacity: 0; transition: opacity .8s; }
     .hero-frame canvas.live { opacity: 1; }
     body.waiting header, body.waiting main { display: none; }
@@ -163,8 +163,9 @@
       const canvas = document.getElementById('hero-live');
       const gl = canvas.getContext('webgl', { premultipliedAlpha: false });
       if (!gl) return;
-      const vs = `attribute vec2 p; varying vec2 uv;
-        void main() { uv = vec2(p.x, -p.y) * .5 + .5; gl_Position = vec4(p, 0., 1.); }`;
+      // crop is the share of the picture that fits the screen, so the canvas fills it like object-fit: cover.
+      const vs = `attribute vec2 p; uniform vec2 crop; varying vec2 uv;
+        void main() { uv = vec2(p.x, -p.y) * .5 * crop + .5; gl_Position = vec4(p, 0., 1.); }`;
       const fs = `precision highp float;
         uniform sampler2D img, mask, clean; uniform float t; varying vec2 uv;
         const float LOOP = 16.;
@@ -220,6 +221,7 @@
       gl.enableVertexAttribArray(0);
       gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
       const tLoc = gl.getUniformLocation(prog, 't');
+      const cropLoc = gl.getUniformLocation(prog, 'crop');
 
       function texture(unit, name, im) {
         gl.activeTexture(gl.TEXTURE0 + unit);
@@ -247,7 +249,10 @@
           if (!visible || document.hidden) return;
           const dpr = Math.min(devicePixelRatio || 1, 2);
           const w = Math.round(canvas.clientWidth * dpr), h = Math.round(canvas.clientHeight * dpr);
-          if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; gl.viewport(0, 0, w, h); }
+          if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; gl.viewport(0, 0, w, h);
+            const r = (w / h) / (im.width / im.height);
+            gl.uniform2f(cropLoc, Math.min(1, r), Math.min(1, 1 / r));
+          }
           gl.uniform1f(tLoc, ((now - start) / 1000) % 16);  // matches LOOP in the shader
           gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
           canvas.classList.add('live');
